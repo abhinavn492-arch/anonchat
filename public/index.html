@@ -1,93 +1,330 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>AnonChat</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnonChat.cam - Talk to Strangers</title>
   <style>
-    body { font-family: Arial; background: #0a0a0a; color: white; text-align: center; margin: 0; padding: 20px; }
-    button { padding: 15px 30px; margin: 10px; font-size: 18px; cursor: pointer; border: none; border-radius: 8px; }
-    #videoBtn { background: #4CAF50; color: white; }
-    #textBtn { background: #2196F3; color: white; }
-    #videos { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
-    video { width: 45%; max-width: 400px; background: #222; border-radius: 8px; }
-    #chat { max-width: 600px; margin: 0 auto; }
-    #messages { height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; text-align: left; margin: 10px 0; }
-    #msgInput { width: 70%; padding: 10px; }
-    .hidden { display: none; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      min-height: 100vh;
+    }
+   .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    /* Start Screen */
+    #start-screen { text-align: center; padding: 60px 20px; }
+    #start-screen h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #00dbde, #fc00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #start-screen p { color: #aaa; margin-bottom: 40px; font-size: 1.2rem; }
+   .mode-btn {
+      padding: 18px 40px;
+      margin: 10px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+   .mode-btn:hover { transform: scale(1.05); }
+    #videoBtn { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+    #textBtn { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+
+    /* Chat Screen */
+    #chat-screen { display: none; }
+    #status {
+      text-align: center;
+      font-size: 1.1rem;
+      padding: 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+   .main-content { display: flex; gap: 20px; }
+   .video-section { flex: 2; }
+   .sidebar { flex: 1; }
+
+    #videos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    video {
+      width: 100%;
+      background: #000;
+      border-radius: 12px;
+      aspect-ratio: 4/3;
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+   .video-label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+   .video-wrapper { position: relative; }
+
+    /* Chat Box */
+    #messages {
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 15px;
+      text-align: left;
+      margin-bottom: 15px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.3);
+    }
+    #messages div { margin-bottom: 8px; padding: 8px; border-radius: 6px; }
+   .you { background: rgba(102,126,234,0.3); }
+   .stranger { background: rgba(245,87,108,0.3); }
+
+    #msgInput {
+      width: 100%;
+      padding: 15px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.3);
+      color: white;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+    #msgInput:focus { outline: none; border-color: #667eea; }
+
+   .btn-row { display: flex; gap: 10px; }
+   .action-btn {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    #nextBtn { background: #ff4757; color: white; }
+    #nextBtn:hover { background: #ff3742; }
+    #reportBtn { background: rgba(255,255,255,0.1); color: white; }
+
+    /* Ad Spaces */
+   .ad-space {
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      color: #666;
+      margin-bottom: 20px;
+    }
+   .ad-banner { height: 90px; }
+   .ad-sidebar { height: 250px; }
+
+   .hidden { display: none!important; }
+
+    @media (max-width: 900px) {
+     .main-content { flex-direction: column; }
+      #videos { grid-template-columns: 1fr; }
+      #start-screen h1 { font-size: 2rem; }
+    }
   </style>
 </head>
 <body>
-  <div id="start">
-    <h1>AnonChat.cam</h1>
-    <p>Talk to strangers anonymously</p>
-    <button id="videoBtn" onclick="start('video')">Video Chat</button>
-    <button id="textBtn" onclick="start('text')">Text Only</button>
-  </div>
+  <div class="container">
+    <!-- Start Screen -->
+    <div id="start-screen">
+      <h1>AnonChat.cam</h1>
+      <p>Talk to strangers anonymously. No login required.</p>
+      <button id="videoBtn" class="mode-btn" onclick="startChat('video')">📹 Video Chat</button>
+      <button id="textBtn" class="mode-btn" onclick="startChat('text')">💬 Text Only</button>
 
-  <div id="chat" class="hidden">
-    <div id="status">Connecting to stranger...</div>
-    <div id="videos">
-      <video id="localVideo" autoplay muted playsinline></video>
-      <video id="remoteVideo" autoplay playsinline></video>
+      <div class="ad-space ad-banner" style="margin-top: 60px;">
+        Ad Space - 728x90
+      </div>
     </div>
-    <div id="messages"></div>
-    <input id="msgInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMsg()" />
-    <button onclick="next()">Next Stranger</button>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen">
+      <div id="status">Connecting...</div>
+
+      <div class="main-content">
+        <div class="video-section">
+          <div id="videos">
+            <div class="video-wrapper">
+              <span class="video-label">You</span>
+              <video id="localVideo" autoplay muted playsinline></video>
+            </div>
+            <div class="video-wrapper">
+              <span class="video-label">Stranger</span>
+              <video id="remoteVideo" autoplay playsinline></video>
+            </div>
+          </div>
+
+          <div id="messages"></div>
+          <input id="msgInput" placeholder="Type a message and press Enter..." onkeypress="if(event.key==='Enter')sendMessage()" />
+          <div class="btn-row">
+            <button id="nextBtn" class="action-btn" onclick="nextStranger()">⏭️ Next Stranger</button>
+            <button id="reportBtn" class="action-btn" onclick="alert('Reported')">⚠️ Report</button>
+          </div>
+        </div>
+
+        <div class="sidebar">
+          <div class="ad-space ad-sidebar">
+            Ad Space<br>300x250
+          </div>
+          <div class="ad-space ad-sidebar">
+            Ad Space<br>300x250
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    let pc, localStream, mode = 'video';
-    
-    async function start(selectedMode) {
+    let pc = null;
+    let localStream = null;
+    let remoteStream = null;
+    let mode = 'video';
+
+    const servers = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
+
+    async function startChat(selectedMode) {
       mode = selectedMode;
-      document.getElementById('start').classList.add('hidden');
-      document.getElementById('chat').classList.remove('hidden');
-      
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('chat-screen').style.display = 'block';
+
       if (mode === 'video') {
         try {
           localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           document.getElementById('localVideo').srcObject = localStream;
-        } catch (e) {
-          alert('Camera blocked. Using Text Only mode.');
+        } catch (err) {
+          alert('Camera/mic blocked. Switching to Text Only mode.');
           mode = 'text';
           document.getElementById('videos').classList.add('hidden');
         }
       } else {
         document.getElementById('videos').classList.add('hidden');
       }
-      
+
       socket.emit('join', { mode });
     }
 
-    function sendMsg() {
+    function createPeerConnection() {
+      pc = new RTCPeerConnection(servers);
+
+      if (localStream && mode === 'video') {
+        localStream.getTracks().forEach(track => {
+          pc.addTrack(track, localStream);
+        });
+      }
+
+      pc.ontrack = (event) => {
+        remoteStream = event.streams[0];
+        document.getElementById('remoteVideo').srcObject = remoteStream;
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', event.candidate);
+        }
+      };
+    }
+
+    async function makeCall() {
+      createPeerConnection();
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('offer', offer);
+    }
+
+    socket.on('create-offer', () => {
+      makeCall();
+    });
+
+    socket.on('offer', async (offer) => {
+      createPeerConnection();
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('answer', answer);
+    });
+
+    socket.on('answer', async (answer) => {
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    socket.on('ice-candidate', async (candidate) => {
+      if (pc) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+
+    socket.on('partner-disconnected', () => {
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      document.getElementById('remoteVideo').srcObject = null;
+      addMessage('Stranger disconnected.', 'system');
+    });
+
+    function sendMessage() {
       const input = document.getElementById('msgInput');
-      if (input.value) {
-        socket.emit('message', input.value);
-        addMsg('You: ' + input.value);
+      const msg = input.value.trim();
+      if (msg) {
+        socket.emit('message', msg);
+        addMessage('You: ' + msg, 'you');
         input.value = '';
       }
     }
 
-    function addMsg(msg) {
+    function addMessage(msg, type = 'stranger') {
       const div = document.getElementById('messages');
-      div.innerHTML += '<div>' + msg + '</div>';
+      const msgDiv = document.createElement('div');
+      msgDiv.className = type;
+      msgDiv.textContent = msg;
+      div.appendChild(msgDiv);
       div.scrollTop = div.scrollHeight;
     }
 
-    function next() {
-      socket.emit('next');
+    socket.on('message', (msg) => addMessage(msg, 'stranger'));
+    socket.on('status', (txt) => document.getElementById('status').innerText = txt);
+
+    function nextStranger() {
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      document.getElementById('remoteVideo').srcObject = null;
       document.getElementById('messages').innerHTML = '';
-      document.getElementById('status').innerText = 'Finding new stranger...';
+      socket.emit('next');
     }
 
-    // Socket events - your existing WebRTC code goes here
-    socket.on('message', addMsg);
-    socket.on('status', (txt) => document.getElementById('status').innerText = txt);
-    
-    // Add your existing WebRTC peer connection code here
-    // When creating offer/answer, only add localStream if mode === 'video'
+    // Stop camera when leaving page
+    window.onbeforeunload = () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+    };
   </script>
 </body>
 </html>
