@@ -20,19 +20,21 @@ app.get('/', (req, res) => {
 let videoQueues = { any: [], IN: [], US: [], GB: [], CA: [] };
 let textQueues = { any: [], IN: [], US: [], GB: [], CA: [] };
 let activeUsers = new Map();
-let waitingTimers = new Map(); // socket.id -> timeout
+let waitingTimers = new Map();
+let onlineCount = 0;
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-  
-  // Get country from Cloudflare header or default
+  onlineCount++;
+  io.emit('onlineCount', onlineCount);
+
   const country = socket.handshake.headers['cf-ipcountry'] || 'XX';
-  
-  activeUsers.set(socket.id, { 
-    socket, 
-    mode: null, 
-    partner: null, 
-    interests: [], 
+
+  activeUsers.set(socket.id, {
+    socket,
+    mode: null,
+    partner: null,
+    interests: [],
     country: country,
     countryFilter: 'any',
     joinedAt: Date.now()
@@ -46,7 +48,6 @@ io.on('connection', (socket) => {
     userData.countryFilter = country || 'any';
     userData.partner = null;
     userData.joinedAt = Date.now();
-
     tryMatchUser(socket);
   });
 
@@ -54,14 +55,11 @@ io.on('connection', (socket) => {
     console.log(`${socket.id} clicked next`);
     const userData = activeUsers.get(socket.id);
     if (!userData) return;
-    
     disconnectPartner(socket);
     removeFromAllQueues(socket);
     clearWaitingTimer(socket.id);
-    
     userData.partner = null;
     userData.joinedAt = Date.now();
-    
     tryMatchUser(socket);
   });
 
@@ -116,6 +114,8 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    onlineCount--;
+    io.emit('onlineCount', onlineCount);
     disconnectPartner(socket);
     removeFromAllQueues(socket);
     clearWaitingTimer(socket.id);
@@ -126,106 +126,80 @@ io.on('connection', (socket) => {
 function tryMatchUser(socket) {
   const userData = activeUsers.get(socket.id);
   const queues = userData.mode === 'video'? videoQueues : textQueues;
-  
   cleanAllQueues(queues);
-  
-  // Tier 1: Exact match - same country filter + shared interest
   let partner = findMatch(socket, queues, 'exact');
   if (partner) return pairUsers(socket, partner, 'Perfect match!');
-  
-  // Set progressive fallback timers
-  socket.emit('status', { 
-    text: 'Searching for stranger...', 
+  socket.emit('status', {
+    text: 'Searching for stranger...',
     matchInfo: `Looking: ${userData.countryFilter!== 'any'? userData.countryFilter : 'Any country'} | ${userData.interests.length? userData.interests.join(', ') : 'Any interest'}`
   });
-  
-  // Tier 2: After 10s - same interest, any country
   const timer1 = setTimeout(() => {
     if (!userData.partner && activeUsers.has(socket.id)) {
       let partner = findMatch(socket, queues, 'interest');
       if (partner) return pairUsers(socket, partner, 'Matched by interest');
     }
   }, 10000);
-  
-  // Tier 3: After 20s - same country, any interest 
   const timer2 = setTimeout(() => {
     if (!userData.partner && activeUsers.has(socket.id)) {
       let partner = findMatch(socket, queues, 'country');
       if (partner) return pairUsers(socket, partner, 'Matched by country');
     }
   }, 20000);
-  
-  // Tier 4: After 30s - anyone
   const timer3 = setTimeout(() => {
     if (!userData.partner && activeUsers.has(socket.id)) {
       let partner = findMatch(socket, queues, 'any');
       if (partner) return pairUsers(socket, partner, 'Global match');
-      else {
-        // Add to queue if still no match
-        addToQueue(socket, queues);
-      }
+      else addToQueue(socket, queues);
     }
   }, 30000);
-  
   waitingTimers.set(socket.id, [timer1, timer2, timer3]);
-  
-  // Add to queue immediately but keep searching
   addToQueue(socket, queues);
 }
 
 function findMatch(socket, queues, tier) {
   const userData = activeUsers.get(socket.id);
   const targetQueues = [];
-  
   if (tier === 'exact') {
-    // Must match country filter + share interest
     if (userData.countryFilter!== 'any') {
       targetQueues.push(queues[userData.countryFilter] || []);
     } else {
       targetQueues.push(queues['any']);
     }
   } else if (tier === 'interest') {
-    // Any country, but must share interest
     Object.values(queues).forEach(q => targetQueues.push(q));
   } else if (tier === 'country') {
-    // Must match country filter, any interest
     if (userData.countryFilter!== 'any') {
       targetQueues.push(queues[userData.countryFilter] || []);
     } else {
       targetQueues.push(queues['any']);
     }
   } else {
-    // Any user
     Object.values(queues).forEach(q => targetQueues.push(q));
   }
-  
   for (let queue of targetQueues) {
     for (let i = 0; i < queue.length; i++) {
       const partner = queue[i];
       if (partner.id === socket.id) continue;
       if (!activeUsers.has(partner.id) ||!partner.connected) continue;
-      
       const partnerData = activeUsers.get(partner.id);
-      
-      // Check match criteria
       if (tier === 'exact') {
-        const hasSharedInterest = userData.interests.length === 0 || 
+        const hasSharedInterest = userData.interests.length === 0 ||
           partnerData.interests.some(int => userData.interests.includes(int));
-        const countryMatch = userData.countryFilter === 'any' || 
+        const countryMatch = userData.countryFilter === 'any' ||
           partnerData.country === userData.countryFilter;
         if (hasSharedInterest && countryMatch) {
           queue.splice(i, 1);
           return partner;
         }
       } else if (tier === 'interest') {
-        const hasSharedInterest = userData.interests.length === 0 || 
+        const hasSharedInterest = userData.interests.length === 0 ||
           partnerData.interests.some(int => userData.interests.includes(int));
         if (hasSharedInterest) {
           queue.splice(i, 1);
           return partner;
         }
       } else if (tier === 'country') {
-        const countryMatch = userData.countryFilter === 'any' || 
+        const countryMatch = userData.countryFilter === 'any' ||
           partnerData.country === userData.countryFilter;
         if (countryMatch) {
           queue.splice(i, 1);
@@ -244,8 +218,6 @@ function addToQueue(socket, queues) {
   const userData = activeUsers.get(socket.id);
   const queueKey = userData.countryFilter!== 'any'? userData.countryFilter : 'any';
   if (!queues[queueKey]) queues[queueKey] = [];
-  
-  // Don't add if already in queue
   if (!queues[queueKey].find(s => s.id === socket.id)) {
     queues[queueKey].push(socket);
     console.log(`${socket.id} added to ${userData.mode} queue: ${queueKey}`);
@@ -268,21 +240,16 @@ function clearWaitingTimer(socketId) {
 function pairUsers(user1Socket, user2Socket, matchType) {
   clearWaitingTimer(user1Socket.id);
   clearWaitingTimer(user2Socket.id);
-  
   const user1Data = activeUsers.get(user1Socket.id);
   const user2Data = activeUsers.get(user2Socket.id);
-  
   user1Data.partner = user2Socket;
   user2Data.partner = user1Socket;
-  
   const matchInfo = `Matched: ${matchType}`;
   user1Socket.emit('status', { text: 'Connected! Say hi.', matchInfo });
   user2Socket.emit('status', { text: 'Connected! Say hi.', matchInfo });
-  
   if (user1Data.mode === 'video') {
     user1Socket.emit('create-offer');
   }
-  
   console.log(`Paired: ${user1Socket.id} <-> ${user2Socket.id} | ${matchType}`);
 }
 
