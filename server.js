@@ -2,42 +2,47 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
-  cors: { origin: "*" }
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
+const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from 'public' folder or root
-app.use(express.static(__dirname));
+// Serve all static files from 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes
+// Send index.html for root route
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Queues for matching
+// Queues for matching users
 let videoQueue = [];
 let textQueue = [];
-let activeUsers = new Map(); // socket.id -> socket
+let activeUsers = new Map(); // socket.id -> socket data
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-  activeUsers.set(socket.id, socket);
-  
-  // User joins queue
+  activeUsers.set(socket.id, { socket, mode: null, partner: null });
+
+  // User joins queue with selected mode
   socket.on('join', ({ mode }) => {
-    socket.mode = mode || 'video';
-    socket.partner = null;
+    const userData = activeUsers.get(socket.id);
+    userData.mode = mode || 'video';
+    userData.partner = null;
+
+    const queue = userData.mode === 'video' ? videoQueue : textQueue;
     
-    const queue = socket.mode === 'video' ? videoQueue : textQueue;
-    
-    // Try to find a partner
+    // Try to find a partner in same mode queue
     if (queue.length > 0) {
-      const partner = queue.shift();
+      const partnerSocket = queue.shift();
       
-      // Make sure partner is still connected
-      if (activeUsers.has(partner.id)) {
-        pairUsers(socket, partner);
+      // Make sure partner still exists
+      if (activeUsers.has(partnerSocket.id)) {
+        pairUsers(socket, partnerSocket);
       } else {
         queue.push(socket);
         socket.emit('status', 'Waiting for a stranger...');
@@ -48,40 +53,47 @@ io.on('connection', (socket) => {
     }
   });
 
-  // WebRTC signaling
+  // WebRTC signaling - only used in video mode
   socket.on('offer', (data) => {
-    if (socket.partner) {
-      socket.partner.emit('offer', data);
+    const userData = activeUsers.get(socket.id);
+    if (userData?.partner) {
+      userData.partner.emit('offer', data);
     }
   });
 
   socket.on('answer', (data) => {
-    if (socket.partner) {
-      socket.partner.emit('answer', data);
+    const userData = activeUsers.get(socket.id);
+    if (userData?.partner) {
+      userData.partner.emit('answer', data);
     }
   });
 
   socket.on('ice-candidate', (data) => {
-    if (socket.partner) {
-      socket.partner.emit('ice-candidate', data);
+    const userData = activeUsers.get(socket.id);
+    if (userData?.partner) {
+      userData.partner.emit('ice-candidate', data);
     }
   });
 
-  // Text messages
+  // Text messages - works in both modes
   socket.on('message', (msg) => {
-    if (socket.partner) {
-      socket.partner.emit('message', 'Stranger: ' + msg);
+    const userData = activeUsers.get(socket.id);
+    if (userData?.partner && msg.trim()) {
+      userData.partner.emit('message', 'Stranger: ' + msg);
     }
   });
 
-  // Next stranger
+  // Next stranger button
   socket.on('next', () => {
     disconnectPartner(socket);
-    // Rejoin queue in same mode
-    socket.emit('join', { mode: socket.mode });
+    const userData = activeUsers.get(socket.id);
+    if (userData?.mode) {
+      // Rejoin same queue
+      socket.emit('join', { mode: userData.mode });
+    }
   });
 
-  // Disconnect
+  // Handle disconnect
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     disconnectPartner(socket);
@@ -90,25 +102,32 @@ io.on('connection', (socket) => {
   });
 });
 
-function pairUsers(user1, user2) {
-  user1.partner = user2;
-  user2.partner = user1;
+function pairUsers(user1Socket, user2Socket) {
+  const user1Data = activeUsers.get(user1Socket.id);
+  const user2Data = activeUsers.get(user2Socket.id);
   
-  user1.emit('status', 'Connected! Say hi.');
-  user2.emit('status', 'Connected! Say hi.');
+  user1Data.partner = user2Socket;
+  user2Data.partner = user1Socket;
   
-  // Video mode: user1 creates offer
-  if (user1.mode === 'video') {
-    user1.emit('create-offer');
+  user1Socket.emit('status', 'Connected! Say hi.');
+  user2Socket.emit('status', 'Connected! Say hi.');
+  
+  // If video mode, user1 creates WebRTC offer
+  if (user1Data.mode === 'video') {
+    user1Socket.emit('create-offer');
   }
 }
 
 function disconnectPartner(socket) {
-  if (socket.partner) {
-    socket.partner.emit('status', 'Stranger disconnected.');
-    socket.partner.emit('partner-disconnected');
-    socket.partner.partner = null;
-    socket.partner = null;
+  const userData = activeUsers.get(socket.id);
+  if (userData?.partner) {
+    const partnerData = activeUsers.get(userData.partner.id);
+    if (partnerData) {
+      partnerData.partner = null;
+      userData.partner.emit('status', 'Stranger disconnected.');
+      userData.partner.emit('partner-disconnected');
+    }
+    userData.partner = null;
   }
 }
 
