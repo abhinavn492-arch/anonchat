@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
 // Queues for matching users
 let videoQueue = [];
 let textQueue = [];
-let activeUsers = new Map(); // socket.id -> socket data
+let activeUsers = new Map(); // socket.id -> user data
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -34,7 +34,7 @@ io.on('connection', (socket) => {
     userData.mode = mode || 'video';
     userData.partner = null;
 
-    const queue = userData.mode === 'video' ? videoQueue : textQueue;
+    const queue = userData.mode === 'video'? videoQueue : textQueue;
     
     // Try to find a partner in same mode queue
     if (queue.length > 0) {
@@ -50,6 +50,18 @@ io.on('connection', (socket) => {
     } else {
       queue.push(socket);
       socket.emit('status', 'Waiting for a stranger...');
+    }
+  });
+
+  // Handle mode switch during chat
+  socket.on('switch-mode', (newMode) => {
+    const userData = activeUsers.get(socket.id);
+    if (userData) {
+      userData.mode = newMode;
+      if (userData.partner) {
+        userData.partner.emit('status', 'Stranger switched to Text Only');
+        userData.partner.emit('partner-switched-to-text');
+      }
     }
   });
 
@@ -132,8 +144,8 @@ function disconnectPartner(socket) {
 }
 
 function removeFromQueues(socket) {
-  videoQueue = videoQueue.filter(s => s.id !== socket.id);
-  textQueue = textQueue.filter(s => s.id !== socket.id);
+  videoQueue = videoQueue.filter(s => s.id!== socket.id);
+  textQueue = textQueue.filter(s => s.id!== socket.id);
 }
 
 http.listen(PORT, () => {
