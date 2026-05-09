@@ -12,7 +12,7 @@
       color: #fff;
       min-height: 100vh;
     }
-   .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
     /* Start Screen */
     #start-screen { text-align: center; padding: 60px 20px; }
@@ -24,7 +24,7 @@
       -webkit-text-fill-color: transparent;
     }
     #start-screen p { color: #aaa; margin-bottom: 40px; font-size: 1.2rem; }
-   .mode-btn {
+  .mode-btn {
       padding: 18px 40px;
       margin: 10px;
       font-size: 1.2rem;
@@ -34,7 +34,7 @@
       font-weight: 600;
       transition: transform 0.2s;
     }
-   .mode-btn:hover { transform: scale(1.05); }
+  .mode-btn:hover { transform: scale(1.05); }
     #videoBtn { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
     #textBtn { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
 
@@ -49,9 +49,9 @@
       margin-bottom: 20px;
     }
 
-   .main-content { display: flex; gap: 20px; }
-   .video-section { flex: 2; }
-   .sidebar { flex: 1; }
+  .main-content { display: flex; gap: 20px; }
+  .video-section { flex: 2; }
+  .sidebar { flex: 1; }
 
     #videos {
       display: grid;
@@ -66,7 +66,7 @@
       aspect-ratio: 4/3;
       border: 2px solid rgba(255,255,255,0.1);
     }
-   .video-label {
+  .video-label {
       position: absolute;
       top: 10px;
       left: 10px;
@@ -75,7 +75,7 @@
       border-radius: 6px;
       font-size: 0.85rem;
     }
-   .video-wrapper { position: relative; }
+  .video-wrapper { position: relative; }
 
     /* Chat Box */
     #messages {
@@ -89,8 +89,9 @@
       background: rgba(0,0,0,0.3);
     }
     #messages div { margin-bottom: 8px; padding: 8px; border-radius: 6px; }
-   .you { background: rgba(102,126,234,0.3); }
-   .stranger { background: rgba(245,87,108,0.3); }
+  .you { background: rgba(102,126,234,0.3); }
+  .stranger { background: rgba(245,87,108,0.3); }
+  .system { background: rgba(255,255,255,0.1); text-align: center; font-style: italic; color: #aaa; }
 
     #msgInput {
       width: 100%;
@@ -104,8 +105,8 @@
     }
     #msgInput:focus { outline: none; border-color: #667eea; }
 
-   .btn-row { display: flex; gap: 10px; }
-   .action-btn {
+  .btn-row { display: flex; gap: 10px; }
+  .action-btn {
       flex: 1;
       padding: 15px;
       border: none;
@@ -118,9 +119,11 @@
     #nextBtn { background: #ff4757; color: white; }
     #nextBtn:hover { background: #ff3742; }
     #reportBtn { background: rgba(255,255,255,0.1); color: white; }
+    #switchBtn { background: #9b59b6; color: white; }
+    #switchBtn:hover { background: #8e44ad; }
 
     /* Ad Spaces */
-   .ad-space {
+  .ad-space {
       background: rgba(255,255,255,0.05);
       border: 2px dashed rgba(255,255,255,0.2);
       border-radius: 12px;
@@ -129,13 +132,13 @@
       color: #666;
       margin-bottom: 20px;
     }
-   .ad-banner { height: 90px; }
-   .ad-sidebar { height: 250px; }
+  .ad-banner { height: 90px; }
+  .ad-sidebar { height: 250px; }
 
-   .hidden { display: none!important; }
+  .hidden { display: none!important; }
 
     @media (max-width: 900px) {
-     .main-content { flex-direction: column; }
+    .main-content { flex-direction: column; }
       #videos { grid-template-columns: 1fr; }
       #start-screen h1 { font-size: 2rem; }
     }
@@ -175,7 +178,8 @@
           <div id="messages"></div>
           <input id="msgInput" placeholder="Type a message and press Enter..." onkeypress="if(event.key==='Enter')sendMessage()" />
           <div class="btn-row">
-            <button id="nextBtn" class="action-btn" onclick="nextStranger()">⏭️ Next Stranger</button>
+            <button id="switchBtn" class="action-btn" onclick="switchToText()">💬 Text Only</button>
+            <button id="nextBtn" class="action-btn" onclick="nextStranger()">⏭️ Next</button>
             <button id="reportBtn" class="action-btn" onclick="alert('Reported')">⚠️ Report</button>
           </div>
         </div>
@@ -216,13 +220,16 @@
         try {
           localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           document.getElementById('localVideo').srcObject = localStream;
+          document.getElementById('switchBtn').classList.remove('hidden');
         } catch (err) {
           alert('Camera/mic blocked. Switching to Text Only mode.');
           mode = 'text';
           document.getElementById('videos').classList.add('hidden');
+          document.getElementById('switchBtn').classList.add('hidden');
         }
       } else {
         document.getElementById('videos').classList.add('hidden');
+        document.getElementById('switchBtn').classList.add('hidden');
       }
 
       socket.emit('join', { mode });
@@ -287,6 +294,10 @@
       addMessage('Stranger disconnected.', 'system');
     });
 
+    socket.on('partner-switched-to-text', () => {
+      addMessage('Stranger turned off their camera.', 'system');
+    });
+
     function sendMessage() {
       const input = document.getElementById('msgInput');
       const msg = input.value.trim();
@@ -319,7 +330,27 @@
       socket.emit('next');
     }
 
-    // Stop camera when leaving page
+    function switchToText() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      
+      document.getElementById('videos').classList.add('hidden');
+      document.getElementById('switchBtn').classList.add('hidden');
+      
+      socket.emit('switch-mode', 'text');
+      mode = 'text';
+      
+      addMessage('Switched to Text Only mode. Camera off.', 'system');
+      document.getElementById('status').innerText = 'Text Only mode';
+    }
+
     window.onbeforeunload = () => {
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
