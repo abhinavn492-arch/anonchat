@@ -53,15 +53,14 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle mode switch during chat
-  socket.on('switch-mode', (newMode) => {
+  // User leaves chat and goes back to home
+  socket.on('leave', () => {
+    disconnectPartner(socket);
+    removeFromQueues(socket);
     const userData = activeUsers.get(socket.id);
     if (userData) {
-      userData.mode = newMode;
-      if (userData.partner) {
-        userData.partner.emit('status', 'Stranger switched to Text Only');
-        userData.partner.emit('partner-switched-to-text');
-      }
+      userData.mode = null;
+      userData.partner = null;
     }
   });
 
