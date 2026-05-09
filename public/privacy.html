@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnonChat - Privacy Policy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-gray-100 min-h-screen">
+  <div class="max-w-4xl mx-auto p-6 md:p-10">
+    <header class="mb-10">
+      <a href="/" class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center font-bold text-xl">A</div>
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">AnonChat</h1>
+      </a>
+      <h2 class="text-4xl font-bold mb-2">Privacy Policy</h2>
+      <p class="text-gray-400">Last updated: May 8, 2026</p>
+    </header>
+
+    <div class="glass border border-gray-700/50 rounded-2xl p-8 space-y-8">
+      
+      <section>
+        <h3 class="text-2xl font-bold mb-4 text-indigo-400">1. Data We Do NOT Collect</h3>
+        <p class="text-gray-300 leading-relaxed">
+          AnonChat does NOT record, store, or log your video calls or text messages. Conversations are peer-to-peer and disappear when you disconnect. 
+          We do not have access to your chats and cannot retrieve them.
+        </p>
+      </section>
+
+      <section>
+        <h3 class="text-2xl font-bold mb-4 text-indigo-400">2. Data We DO Collect</h3>
+        <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+          <li><strong>IP Hash:</strong> We hash your IP address to enforce bans. We cannot reverse the hash to see your real IP.</li>
+          <li><strong>Reports:</strong> When you report a user, we store: reason, timestamp, and IP hash for 24 hours.</li>
+          <li><strong>Ban List:</strong> Hashed IPs of banned users and ban expiration date.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 class="text-2xl font-bold mb-4 text-indigo-400">3. Cookies</h3>
+        <p class="text-gray-300 leading-relaxed">
+          We use localStorage only to remember if you agreed to the age gate. No tracking cookies, no analytics, no ads.
+        </p>
+      </section>
+
+      <section>
+        <h3 class="text-2xl font-bold mb-4 text-indigo-400">4. Third Parties</h3>
+        <p class="text-gray-300 leading-relaxed">
+          Video calls use WebRTC with public STUN/TURN servers. Your video data goes directly to the other user, not through our servers.
+        </p>
+      </section>
+
+      <section>
+        <h3 class="text-2xl font-bold mb-4 text-indigo-400">5. Your Rights</h3>
+        <p class="text-gray-300 leading-relaxed">
+          Since we don't store personal data, there is nothing to delete. To be "forgotten", just stop using the site. 
+          Ban appeals: legal@anonchat.example
+        </p>
+      </section>
+
+      <section>
+        <h3 class="text-2xl font-bold mb-4 text-indigo-400">6. Contact</h3>
+        <p class="text-gray-300 leading-relaxed">
+          Questions? Email: privacy@anonchat.example
+        </p>
+      </section>
+
+    </div>
+
+    <div class="mt-8 text-center">
+      <a href="/" class="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-8 py-3 rounded-xl font-semibold transition transform hover:scale-105">
+        Back to AnonChat
+      </a>
+    </div>
+  </div>
+</body>
+</html>
