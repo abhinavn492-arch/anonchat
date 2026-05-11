@@ -363,6 +363,7 @@
 
     async function startChat(selectedMode) {
       mode = selectedMode;
+      gtag('event', 'start_chat', { 'mode': selectedMode });
       document.getElementById('start-screen').style.display = 'none';
       document.getElementById('chat-screen').style.display = 'block';
       document.getElementById('messages').innerHTML = '';
