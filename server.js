@@ -13,10 +13,6 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 let videoQueues = { any: [], IN: [], US: [], GB: [], CA: [] };
 let textQueues = { any: [], IN: [], US: [], GB: [], CA: [] };
 let activeUsers = new Map();
@@ -273,6 +269,11 @@ function removeFromAllQueues(socket) {
     });
   });
 }
+
+// THIS IS THE CRITICAL FIX - MUST BE LAST
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 http.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
